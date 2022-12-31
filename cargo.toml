@@ -1,7 +1,7 @@
 [workspace]
 
 members = [
-  "services/chat-aggregate",
-  "services/chat-projection",
-  "packages/events",
+  "aggregates/*",
+  "projections/*",
+  "packages/*",
 ]
