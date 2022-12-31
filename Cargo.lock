@@ -100,7 +100,6 @@ version = "2.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7ea16c295198e958ef31930a6ef37d0fb64e9ca3b6116e6b93a8bdae96ee1000"
 dependencies = [
- "actix-macros",
  "futures-core",
  "tokio",
 ]
@@ -396,8 +395,8 @@ name = "chat-projection"
 version = "0.1.0"
 dependencies = [
  "actix-cors",
- "actix-rt",
  "actix-web",
+ "dtos",
  "env_logger",
  "events",
  "eventstore",
@@ -559,6 +558,13 @@ checksum = "8168378f4e5023e7218c89c891c0fd8ecdb5e5e4f18cb78f38cf245dd021e76f"
 dependencies = [
  "block-buffer",
  "crypto-common",
+]
+
+[[package]]
+name = "dtos"
+version = "0.1.0"
+dependencies = [
+ "serde",
 ]
 
 [[package]]

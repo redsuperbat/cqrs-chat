@@ -6,10 +6,10 @@ use actix_web::{
     web::{Data, Path},
     App, HttpResponse, HttpServer, Responder,
 };
+use dtos::{ChatMessage, GetChatDto};
 use events::{ChatCreatedEvent, ChatMessageSentEvent};
 use eventstore::{Client, PersistentSubscriptionOptions, RecordedEvent, StreamPosition};
 use log::{error, info};
-use serde::{Deserialize, Serialize};
 use serde_json::to_string;
 use std::{
     collections::HashMap,
@@ -17,12 +17,6 @@ use std::{
     sync::{Arc, Mutex},
 };
 use uuid::Uuid;
-
-#[derive(Serialize, Deserialize, Debug)]
-struct ChatMessage {
-    message: String,
-    sent_by: String,
-}
 
 #[derive(Debug)]
 struct State {
@@ -99,7 +93,10 @@ async fn get_chat(chat_id: Path<String>, proj: Data<Arc<Mutex<State>>>) -> impl 
         Some(it) => it,
         None => return HttpResponse::NotFound().finish(),
     };
-    let body = match to_string(chat) {
+    let dto = GetChatDto {
+        messages: chat.to_vec(),
+    };
+    let body = match to_string(&dto) {
         Ok(it) => it,
         Err(_) => return HttpResponse::InternalServerError().finish(),
     };
