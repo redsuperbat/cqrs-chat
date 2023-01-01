@@ -1,6 +1,7 @@
 {
   "cSpell.words": [
     "actix",
+    "bindgen",
     "esdb",
     "eventstore",
     "leptos",
