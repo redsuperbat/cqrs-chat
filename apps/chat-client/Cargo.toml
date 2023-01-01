@@ -1,72 +1,50 @@
-
 [package]
 name = "chat-client"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+
 [dependencies]
 leptos = { version = "0.0.22", default-features = false, features = ["serde"] }
 leptos_meta = { version = "0.0.7", default-features = false }
 leptos_router = { version = "0.0.8", default-features = false }
-log = "0.4"
-uuid = { version = "1", features = ["v4", "js", "serde"] }
-serde = { version = "1", features = ["derive"] }
-serde_json = { version = "1" }
-dtos = { path = "../../packages/dtos" }
-gloo-net = { version = "0.2", features = ["http"] }
-reqwasm = "0.5.0"
-eyre = { version = "0.6.8" }
-cfg-if = "1.0"
 
-# deps for csr
-wasm-bindgen = { version = "0.2.83", optional = true }
+gloo-net = { version = "0.2", features = ["http"] }
+log = "0.4"
+cfg-if = "1.0"
+dtos = { path = "../../packages/dtos" }
+events = { path = "../../packages/events" }
+
+# dependecies for client (enable hydrate set)
+wasm-bindgen = { version = "0.2", optional = true }
 console_log = { version = "0.2", optional = true }
-console_error_panic_hook = { version = "0.1.7", optional = true }
+console_error_panic_hook = { version = "0.1", optional = true }
 
 # dependecies for server (enable when ssr set)
-dotenvy = { version = "0.15.6", optional = true }
 actix-files = { version = "0.6", optional = true }
 actix-web = { version = "4", features = ["macros"], optional = true }
 futures = { version = "0.3", optional = true }
 simple_logger = { version = "4.0", optional = true }
+serde_json = { version = "1.0", optional = true }
 reqwest = { version = "0.11", features = ["json"], optional = true }
 leptos_actix = { version = "0.0.4", optional = true }
-
-[dev-dependencies]
-wasm-bindgen-test = "0.3.0"
-
-[features]
-default = ["csr"]
-csr = [
-  "leptos/csr",
-  "leptos/hydrate",
-  "leptos_meta/hydrate",
-  "leptos_router/hydrate",
-  "dep:wasm-bindgen",
-  "dep:console_log",
-  "dep:console_error_panic_hook",
-]
-ssr = [
-  "leptos/ssr",
-  "leptos_meta/ssr",
-  "leptos_router/ssr",
-  "dep:leptos_actix",
-  "dep:reqwest",
-  "dep:actix-web",
-  "dep:actix-files",
-  "dep:futures",
-  "dep:simple_logger",
-  "dep:dotenvy",
-]
-
-[lib]
-crate-type = ["cdylib", "rlib"]
-
+dotenvy = { version = "0.15", optional = true }
+reqwasm = "0.5.0"
+eyre = "0.6.8"
 
 [profile.release]
 codegen-units = 1
 lto = true
 opt-level = 'z'
+
+[features]
+default = ["ssr"]
+hydrate = ["leptos/hydrate", "leptos_meta/hydrate", "leptos_router/hydrate", "dep:wasm-bindgen", "dep:console_log", "dep:console_error_panic_hook", "dep:serde_json"]
+ssr = ["leptos/ssr", "leptos_meta/ssr", "leptos_router/ssr", "dep:leptos_actix", "dep:reqwest", "dep:actix-web", "dep:actix-files", "dep:futures", "dep:simple_logger", "dep:serde_json", "dep:dotenvy"]
+
 
 [package.metadata.leptos]
 # See https://github.com/akesson/cargo-leptos for documentation of all the parameters.
@@ -80,4 +58,4 @@ style-file = "style/main.scss"
 
 bin-features = ["ssr"]
 
-lib-features = ["csr"]
+lib-features = ["hydrate"]

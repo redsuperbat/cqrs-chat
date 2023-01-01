@@ -117,11 +117,14 @@ async fn send_chat_message(message: String, chat_id: String) -> Result<()> {
 
     reqwasm::http::Request::post("http://localhost:8081/send-chat-message")
         .body(json)
+        .header("Content-Type", "application/json")
         .send()
-        .await?
-        .json::<GetChatDto>()
         .await?;
     Ok(())
+}
+
+async fn send_chat_message_wrapper(message: String, chat_id: String) {
+    send_chat_message(message, chat_id).await.unwrap()
 }
 
 #[component]
@@ -136,9 +139,21 @@ pub fn ChatPage(cx: Scope) -> Element {
         dto.with(|it| it.as_ref().unwrap().clone().messages)
             .unwrap_or(vec![])
     };
+    let (message, set_message) = create_signal(cx, "".to_string());
+    let update_message = move |ev: web_sys::InputEvent| {
+        let value = event_target_value(&ev);
+        set_message(value);
+    };
 
-    let action = create_action(cx, |username: &String| {
-        create_chat_wrapper(username.clone())
+    let action = create_action(cx, move |message: &String| {
+        send_chat_message_wrapper(message.clone(), chat_id())
+    });
+
+    create_effect(cx, move |_| {
+        if action.value.get().is_some() {
+            console_log("Refetching data...");
+            dto.refetch()
+        };
     });
 
     view! {
@@ -152,8 +167,8 @@ pub fn ChatPage(cx: Scope) -> Element {
                 </For>
             </div>
             <div class="chat-input" >
-                <input type="text" class="input" />
-                <button class="button" >"Send!"</button>
+                <input type="text" class="input" on:input=update_message />
+                <button class="button" on:click=move |_| action.dispatch(message()) >"Send!"</button>
             </div>
         </section>
     }
