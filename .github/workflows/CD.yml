@@ -39,8 +39,6 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           push: true
-          tags: 
-            - maxrsb/${{ matrix.app.name }}:${{ steps.sha.outputs.short }}
-            - maxrsb/${{ matrix.app.name }}:latest
+          tags: maxrsb/${{ matrix.app.name }}:${{ steps.sha.outputs.short }}, maxrsb/${{ matrix.app.name }}:latest
           file: ${{ matrix.app.file }}
           context: .
