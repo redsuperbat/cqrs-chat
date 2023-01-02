@@ -472,6 +472,7 @@ dependencies = [
  "log",
  "reqwasm",
  "reqwest",
+ "serde",
  "serde_json",
  "simple_logger",
  "wasm-bindgen",

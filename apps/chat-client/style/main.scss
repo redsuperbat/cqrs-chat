@@ -92,19 +92,20 @@ h3 {
 .chat-message {
   display: flex;
   align-items: flex-start;
-  padding: 0.5em 1em;
+  padding: 0.25em 0.7em;
   border-radius: 1em;
   font-size: 1em;
   line-height: 1.5;
 }
 
 .chat-message.mine {
-  align-items: flex-end;
+  margin-left: auto;
   background: #EBF8FF;
   color: #222;
 }
 
 .chat-message.theirs {
+  margin-right: auto;
   background: #FDFDFD;
   color: #222;
 }
@@ -138,4 +139,9 @@ section {
 }
 .chat-input {
   display: flex;
+}
+
+.chat-messages {
+  display: flex;
+  flex-direction: column-reverse;
 }

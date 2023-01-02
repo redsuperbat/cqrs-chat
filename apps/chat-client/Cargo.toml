@@ -15,6 +15,12 @@ leptos_router = { version = "0.0.8", default-features = false }
 gloo-net = { version = "0.2", features = ["http"] }
 log = "0.4"
 cfg-if = "1.0"
+reqwasm = "0.5.0"
+eyre = "0.6.8"
+serde = { version = "1.0.152"  }
+serde_json = { version = "1.0" }
+
+# monorepo deps
 dtos = { path = "../../packages/dtos" }
 events = { path = "../../packages/events" }
 
@@ -28,12 +34,9 @@ actix-files = { version = "0.6", optional = true }
 actix-web = { version = "4", features = ["macros"], optional = true }
 futures = { version = "0.3", optional = true }
 simple_logger = { version = "4.0", optional = true }
-serde_json = { version = "1.0", optional = true }
 reqwest = { version = "0.11", features = ["json"], optional = true }
 leptos_actix = { version = "0.0.4", optional = true }
 dotenvy = { version = "0.15", optional = true }
-reqwasm = "0.5.0"
-eyre = "0.6.8"
 
 [profile.release]
 codegen-units = 1
@@ -42,8 +45,26 @@ opt-level = 'z'
 
 [features]
 default = ["ssr"]
-hydrate = ["leptos/hydrate", "leptos_meta/hydrate", "leptos_router/hydrate", "dep:wasm-bindgen", "dep:console_log", "dep:console_error_panic_hook", "dep:serde_json"]
-ssr = ["leptos/ssr", "leptos_meta/ssr", "leptos_router/ssr", "dep:leptos_actix", "dep:reqwest", "dep:actix-web", "dep:actix-files", "dep:futures", "dep:simple_logger", "dep:serde_json", "dep:dotenvy"]
+hydrate = [
+  "leptos/hydrate",
+  "leptos_meta/hydrate",
+  "leptos_router/hydrate",
+  "dep:wasm-bindgen",
+  "dep:console_log",
+  "dep:console_error_panic_hook",
+]
+ssr = [
+  "leptos/ssr",
+  "leptos_meta/ssr",
+  "leptos_router/ssr",
+  "dep:leptos_actix",
+  "dep:reqwest",
+  "dep:actix-web",
+  "dep:actix-files",
+  "dep:futures",
+  "dep:simple_logger",
+  "dep:dotenvy",
+]
 
 
 [package.metadata.leptos]

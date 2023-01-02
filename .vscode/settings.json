@@ -4,7 +4,9 @@
     "bindgen",
     "esdb",
     "eventstore",
+    "keydown",
     "leptos",
+    "reqwasm",
     "Stylesheet"
   ]
 }

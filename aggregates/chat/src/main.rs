@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::to_string;
 use sha2::{Digest, Sha256};
 
-fn http_ok<T: Serialize>(message: &str, data: Option<T>) -> impl Responder {
+fn http_ok<T: Serialize>(message: &str, data: Option<T>) -> HttpResponse {
     let body = JsonResponse {
         message: message.to_string(),
         data,
@@ -52,6 +52,10 @@ async fn send_chat_message(
     client: web::Data<Client>,
     body: web::Json<SendChatMessageDto>,
 ) -> impl Responder {
+    if body.message.is_empty() {
+        return HttpResponse::BadRequest().finish();
+    }
+
     let message_id = uuid::Uuid::new_v4().to_string();
 
     let event_data = ChatMessageSentEvent {

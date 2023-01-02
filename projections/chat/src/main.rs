@@ -41,10 +41,13 @@ impl State {
             "ChatMessageSentEvent" => {
                 if let Ok(event) = event.as_json::<ChatMessageSentEvent>() {
                     match self.chats.get_mut(&event.chat_id) {
-                        Some(messages) => messages.push(ChatMessage {
-                            message: event.message,
-                            sent_by: event.user_id,
-                        }),
+                        Some(messages) => messages.insert(
+                            0,
+                            ChatMessage {
+                                message: event.message,
+                                sent_by: event.user_id,
+                            },
+                        ),
                         None => error!("Chat message found for unknown chat {}", event.chat_id),
                     }
                 }
