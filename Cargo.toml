@@ -1,0 +1,8 @@
+[workspace]
+
+members = [
+  "aggregates/*",
+  "projections/*",
+  "packages/*",
+  "apps/*"
+]
