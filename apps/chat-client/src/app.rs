@@ -31,7 +31,7 @@ fn get_client_state() -> ClientState {
 }
 
 fn set_client_state(state: &ClientState) {
-    let storage = window().local_storage().unwrap().unwrap();
+    let storage = window().local_storage().ok().flatten().unwrap();
     let json = to_string(state).unwrap();
     storage.set_item("client-state", &json).unwrap()
 }

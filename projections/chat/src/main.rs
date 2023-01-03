@@ -6,6 +6,7 @@ use actix_web::{
     web::{Data, Path},
     App, HttpResponse, HttpServer, Responder,
 };
+
 use dtos::{ChatMessage, GetChatDto};
 use events::{ChatCreatedEvent, ChatMessageSentEvent};
 use eventstore::{Client, PersistentSubscriptionOptions, RecordedEvent, StreamPosition};
@@ -46,6 +47,7 @@ impl State {
                             ChatMessage {
                                 message: event.message,
                                 sent_by: event.user_id,
+                                message_id: event.message_id,
                             },
                         ),
                         None => error!("Chat message found for unknown chat {}", event.chat_id),
@@ -57,7 +59,7 @@ impl State {
     }
 }
 
-async fn setup_eventstore(proj: Arc<Mutex<State>>) {
+async fn setup_proj_eventstore(proj: Arc<Mutex<State>>) {
     info!("Bootstrapping eventstore");
     let uri = env::var("EVENTSTORE_URI").unwrap();
     let settings = uri.parse().unwrap();
@@ -110,15 +112,14 @@ async fn get_chat(chat_id: Path<String>, proj: Data<Arc<Mutex<State>>>) -> impl 
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    env::set_var("RUST_LOG", "info");
-    env_logger::init();
+    env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
     // Need to use an Arc with mutex here because the state will be mutated at the same time it might be accessed.
     let projection = Arc::new(Mutex::new(State::new()));
 
-    spawn(setup_eventstore(projection.clone()));
+    spawn(setup_proj_eventstore(projection.clone()));
 
     let port = 8080;
-    info!("Started server on port {}", port);
+    info!("Started server on http://localhost:{}", port);
     HttpServer::new(move || {
         let cors = Cors::default()
             .allow_any_origin()
@@ -136,6 +137,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::new(projection.clone()))
             .service(get_chat)
     })
+    .workers(2)
     .bind(("localhost", port))?
     .run()
     .await

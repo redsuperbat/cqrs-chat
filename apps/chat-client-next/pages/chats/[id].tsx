@@ -1,20 +1,33 @@
 import axios from "axios";
 import { useRouter } from "next/router";
-import { FC, useState } from "react";
+import { FC, useEffect, useState } from "react";
+import useWebSocket from "react-use-websocket";
 import useSWR from "swr";
 import { UserStore } from "../../storage/user-store";
-import { Data } from "../api/chats/[id]";
+import type { Data } from "../api/chats/[id]";
 
 const fetcher = (url: string) => axios.get(url).then((res) => res.data);
 
 export default () => {
   const [message, setMessage] = useState<string>("");
+  const [messages, setMessages] = useState<
+    { message: string; sent_by: string; message_id: string }[]
+  >([]);
   const router = useRouter();
+  const { lastJsonMessage } = useWebSocket(`ws://localhost:8082/ws/`);
 
   const { data, isLoading, mutate } = useSWR<Data>(
     `/api/chats/${router.query.id}`,
     fetcher
   );
+
+  useEffect(() => {
+    setMessages((it) => [...it, lastJsonMessage]);
+  }, [lastJsonMessage]);
+
+  useEffect(() => {
+    setMessages(data?.messages ?? []);
+  }, [data]);
 
   const sendChatMessage = async () => {
     if (!message) {
@@ -27,7 +40,6 @@ export default () => {
       username: UserStore.get().username,
     });
     setMessage("");
-    await mutate();
   };
 
   if (isLoading || !data) {
@@ -41,7 +53,7 @@ export default () => {
   return (
     <section>
       <div className="chat-messages">
-        {data.messages.map((it) => (
+        {messages.map((it) => (
           <ChatMessage
             key={it.message_id}
             text={it.message}

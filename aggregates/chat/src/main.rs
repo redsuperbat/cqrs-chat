@@ -75,15 +75,14 @@ async fn send_chat_message(
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    env::set_var("RUST_LOG", "info");
-    env_logger::init();
+    env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
     let uri = env::var("EVENTSTORE_URI").unwrap();
     let settings = uri.parse().unwrap();
 
     let client = Client::new(settings).unwrap();
     let port = 8081;
 
-    info!("Started server on port {}", port);
+    info!("Started server on http://localhost:{}", port);
     HttpServer::new(move || {
         let cors = Cors::default()
             .allow_any_origin()
@@ -101,6 +100,7 @@ async fn main() -> std::io::Result<()> {
             .service(create_chat)
             .service(send_chat_message)
     })
+    .workers(2)
     .bind(("localhost", port))?
     .run()
     .await

@@ -9,6 +9,7 @@ pub struct JsonResponse<T> {
 pub struct ChatMessage {
     pub message: String,
     pub sent_by: String,
+    pub message_id: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
