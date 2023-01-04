@@ -16,24 +16,32 @@ use actix_web::{
 };
 use actix_web_actors::ws::{self};
 use events::ChatMessageSentEvent;
-use eventstore::{Client, PersistentSubscription, PersistentSubscriptionOptions, StreamPosition};
+use eventstore::{
+    Client, DeletePersistentSubscriptionOptions, PersistentSubscription,
+    PersistentSubscriptionOptions, StreamPosition,
+};
 use eyre::Result;
 use log::info;
 use serde::Deserialize;
 use serde_json::json;
 use uuid::Uuid;
 
-async fn create_sub(client: &Client) -> Result<PersistentSubscription> {
-    let consumer_grp = Uuid::new_v4().to_string();
-    info!("Creating persistent subscription");
+async fn create_sub(client: &Client, consumer_grp: &str) -> Result<PersistentSubscription> {
+    info!("Creating persistent subscription with id {}", consumer_grp);
     let options = PersistentSubscriptionOptions::default().start_from(StreamPosition::End);
     client
-        .create_persistent_subscription("chat-stream", &consumer_grp, &options)
+        .create_persistent_subscription("chat-stream", consumer_grp, &options)
         .await?;
-
-    info!("Subscribing to persistent subscription");
     client
-        .subscribe_to_persistent_subscription("chat-stream", &consumer_grp, &Default::default())
+        .subscribe_to_persistent_subscription("chat-stream", consumer_grp, &Default::default())
+        .await
+        .map_err(eyre::Error::from)
+}
+
+async fn delete_sub(client: &Client, consumer_grp: &str) -> Result<()> {
+    let options = DeletePersistentSubscriptionOptions::default();
+    client
+        .delete_persistent_subscription("chat-stream", consumer_grp, &options)
         .await
         .map_err(eyre::Error::from)
 }
@@ -42,6 +50,7 @@ async fn create_sub(client: &Client) -> Result<PersistentSubscription> {
 struct ChatServer {
     client_count: Arc<AtomicUsize>,
     chat_id: String,
+    consumer_grp_id: String,
 }
 
 impl Actor for ChatServer {
@@ -64,16 +73,16 @@ impl Handler<Event> for ChatServer {
 impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for ChatServer {
     fn started(&mut self, ctx: &mut Self::Context) {
         self.client_count.fetch_add(1, Ordering::SeqCst);
-        info!("Client connected");
         info!(
-            "Number of clients {}",
+            "Client connected. #clients {}",
             self.client_count.load(Ordering::SeqCst)
         );
         let recipient = ctx.address();
         let chat_id = self.chat_id.clone();
+        let group_id = self.consumer_grp_id.clone();
+        let client = create_eventstore_client().expect("Unable to create eventstore client");
         let fut = async move {
-            let client = create_eventstore_client().expect("Unable to create eventstore client");
-            let mut sub = match create_sub(&client).await {
+            let mut sub = match create_sub(&client, &group_id).await {
                 Ok(sub) => sub,
                 Err(_) => return,
             };
@@ -110,13 +119,21 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for ChatServer {
         ctx.spawn(fut);
     }
 
-    fn finished(&mut self, _: &mut Self::Context) {
+    fn finished(&mut self, ctx: &mut Self::Context) {
         self.client_count.fetch_sub(1, Ordering::SeqCst);
-        info!("Client disconnected!");
         info!(
-            "Number of clients {}",
+            "Client disconnected. #clients {}",
             self.client_count.load(Ordering::SeqCst)
         );
+        let group_id = self.consumer_grp_id.clone();
+        let client = create_eventstore_client().expect("Unable to create eventstore client");
+        let fut = async move {
+            delete_sub(&client, &group_id)
+                .await
+                .expect("Unable to delete subscription")
+        };
+        let fut = actix::fut::wrap_future(fut);
+        ctx.spawn(fut);
     }
 
     fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, ctx: &mut Self::Context) {
@@ -138,10 +155,12 @@ async fn index(
     client_count: Data<Arc<AtomicUsize>>,
     query: web::Query<WsQuery>,
 ) -> Result<HttpResponse, Error> {
+    let consumer_grp_id = Uuid::new_v4().to_string();
     ws::start(
         ChatServer {
             client_count: client_count.as_ref().clone(),
             chat_id: query.chat_id.clone(),
+            consumer_grp_id,
         },
         &req,
         stream,
@@ -169,9 +188,7 @@ fn create_cors() -> Cors {
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
-    info!("Creating eventstore client.");
     let client_count = Arc::new(AtomicUsize::new(0));
-
     let port = 8082;
     info!("Started server at http://localhost:{}", port);
     HttpServer::new(move || {
