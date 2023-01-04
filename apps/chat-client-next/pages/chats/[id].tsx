@@ -66,29 +66,28 @@ export default () => {
   }
 
   return (
-    <section>
-      <div className="chat-messages">
-        {messages.map((it) => (
-          <ChatMessage
-            key={it.message_id}
-            text={it.message}
-            isMine={it.sent_by === UserStore.get().hashedUsername}
+    <div className="chat-page-bg">
+      <section className="chat-page">
+        <div className="chat-messages">
+          {messages.map((it) => (
+            <ChatMessage
+              key={it.message_id}
+              text={it.message}
+              isMine={it.sent_by === UserStore.get().hashedUsername}
+            />
+          ))}
+        </div>
+        <div className="chat-input">
+          <input
+            type="text"
+            value={message}
+            onInput={(e) => setMessage(e.currentTarget.value)}
+            onKeyUp={(e) => e.key === "Enter" && sendChatMessage()}
           />
-        ))}
-      </div>
-      <div className="chat-input">
-        <input
-          type="text"
-          className="input"
-          value={message}
-          onInput={(e) => setMessage(e.currentTarget.value)}
-          onKeyUp={(e) => e.key === "Enter" && sendChatMessage()}
-        />
-        <button className="button" onClick={() => sendChatMessage()}>
-          Send!
-        </button>
-      </div>
-    </section>
+          <button onClick={() => sendChatMessage()}>Send!</button>
+        </div>
+      </section>
+    </div>
   );
 };
 
