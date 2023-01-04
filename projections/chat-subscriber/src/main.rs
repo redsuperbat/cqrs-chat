@@ -79,8 +79,13 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for ChatServer {
             };
 
             loop {
-                let e = sub.next().await.unwrap();
-                let event = e.event.as_ref().unwrap();
+                let event = sub
+                    .next()
+                    .await
+                    .map(|it| it.event)
+                    .ok()
+                    .flatten()
+                    .expect("Unable to resolve event");
                 if let Ok(event) = event.as_json::<ChatMessageSentEvent>() {
                     if event.chat_id == chat_id {
                         let json_string = json!({
@@ -93,8 +98,9 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for ChatServer {
                         recipient.do_send(dto);
                     }
                 }
-
-                sub.ack(e).await.unwrap();
+                sub.ack_ids(vec![event.id])
+                    .await
+                    .expect("unable to ack event");
             }
         };
         let fut = actix::fut::wrap_future::<_, Self>(fut);
@@ -176,7 +182,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::new(client_count.clone()))
             .route("/ws/", web::get().to(index))
     })
-    .workers(1)
+    .workers(4)
     .bind(("localhost", port))?
     .run()
     .await
