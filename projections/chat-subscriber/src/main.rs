@@ -183,7 +183,7 @@ async fn main() -> std::io::Result<()> {
             .route("/ws/", web::get().to(index))
     })
     .workers(4)
-    .bind(("localhost", port))?
+    .bind(("127.0.0.1", port))?
     .run()
     .await
 }

@@ -101,7 +101,7 @@ async fn main() -> std::io::Result<()> {
             .service(send_chat_message)
     })
     .workers(2)
-    .bind(("localhost", port))?
+    .bind(("127.0.0.1", port))?
     .run()
     .await
 }
