@@ -6,7 +6,7 @@ use std::{
     },
 };
 
-use actix::{Actor, AsyncContext, Handler, Message, StreamHandler};
+use actix::{Actor, Addr, AsyncContext, Handler, Message, StreamHandler};
 use actix_cors::Cors;
 use actix_web::{
     http::{self},
@@ -39,6 +39,7 @@ async fn create_sub(client: &Client, consumer_grp: &str) -> Result<PersistentSub
 }
 
 async fn delete_sub(client: &Client, consumer_grp: &str) -> Result<()> {
+    info!("Deleting subscription with id {}", consumer_grp);
     let options = DeletePersistentSubscriptionOptions::default();
     client
         .delete_persistent_subscription("chat-stream", consumer_grp, &options)
@@ -88,13 +89,11 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for ChatServer {
             };
 
             loop {
-                let event = sub
-                    .next()
-                    .await
-                    .map(|it| it.event)
-                    .ok()
-                    .flatten()
-                    .expect("Unable to resolve event");
+                let event = sub.next().await.map(|it| it.event).ok().flatten();
+                let event = match event {
+                    Some(it) => it,
+                    None => continue,
+                };
                 if let Ok(event) = event.as_json::<ChatMessageSentEvent>() {
                     if event.chat_id == chat_id {
                         let json_string = json!({
