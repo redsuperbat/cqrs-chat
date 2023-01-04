@@ -6,7 +6,7 @@ use std::{
     },
 };
 
-use actix::{Actor, Addr, AsyncContext, Handler, Message, StreamHandler};
+use actix::{Actor, AsyncContext, Handler, Message, StreamHandler};
 use actix_cors::Cors;
 use actix_web::{
     http::{self},
