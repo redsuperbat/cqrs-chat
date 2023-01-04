@@ -92,7 +92,10 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for ChatServer {
                 let event = sub.next().await.map(|it| it.event).ok().flatten();
                 let event = match event {
                     Some(it) => it,
-                    None => continue,
+                    None => {
+                        log::error!("None was received in recorded event, breaking loop");
+                        break;
+                    }
                 };
                 if let Ok(event) = event.as_json::<ChatMessageSentEvent>() {
                     if event.chat_id == chat_id {
