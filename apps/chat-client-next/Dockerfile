@@ -5,7 +5,8 @@ RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 # Install dependencies based on the preferred package manager
-COPY apps/chat-client-next/package.json apps/chat-client-next/package-lock.json*
+COPY apps/chat-client-next/package.json . 
+COPY apps/chat-client-next/package-lock.json* . 
 RUN npm ci
 
 
@@ -15,7 +16,7 @@ FROM node:16-alpine AS builder
 WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
-COPY apps/chat-client-next .
+COPY apps/chat-client-next/ .
 # Disable next info stuff
 ENV NEXT_TELEMETRY_DISABLED 1
 
