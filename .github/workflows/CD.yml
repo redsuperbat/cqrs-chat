@@ -12,6 +12,7 @@ jobs:
         app:
           [
             { name: chat-projection, file: projections/chat/Dockerfile },
+            { name: chat-subscriber, file: projections/chat-subscriber/Dockerfile },
             { name: chat-aggregate, file: aggregates/chat/Dockerfile },
             { name: chat-client-next, file: apps/chat-client-next/Dockerfile },
           ]
