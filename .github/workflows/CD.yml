@@ -16,6 +16,7 @@ jobs:
             { name: chat-aggregate, file: aggregates/chat/Dockerfile },
             { name: chat-client-next, file: apps/chat-client-next/Dockerfile },
           ]
+    name: ${{ matrix.app.name }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
