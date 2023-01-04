@@ -15,14 +15,16 @@ use actix_web::{
     App, Error, HttpRequest, HttpResponse, HttpServer,
 };
 use actix_web_actors::ws::{self};
+use events::ChatMessageSentEvent;
 use eventstore::{Client, PersistentSubscription, PersistentSubscriptionOptions, StreamPosition};
 use eyre::Result;
 use log::info;
+use serde::Deserialize;
+use serde_json::json;
 use uuid::Uuid;
 
 async fn create_sub(client: &Client) -> Result<PersistentSubscription> {
     let consumer_grp = Uuid::new_v4().to_string();
-
     info!("Creating persistent subscription");
     let options = PersistentSubscriptionOptions::default().start_from(StreamPosition::End);
     client
@@ -39,6 +41,7 @@ async fn create_sub(client: &Client) -> Result<PersistentSubscription> {
 /// Define HTTP actor
 struct ChatServer {
     client_count: Arc<AtomicUsize>,
+    chat_id: String,
 }
 
 impl Actor for ChatServer {
@@ -54,7 +57,7 @@ impl Handler<Event> for ChatServer {
     type Result = ();
 
     fn handle(&mut self, msg: Event, ctx: &mut Self::Context) {
-        ctx.text(msg.body.as_str());
+        ctx.text(msg.body);
     }
 }
 
@@ -67,8 +70,9 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for ChatServer {
             self.client_count.load(Ordering::SeqCst)
         );
         let recipient = ctx.address();
+        let chat_id = self.chat_id.clone();
         let fut = async move {
-            let client = create_eventstore_client().unwrap();
+            let client = create_eventstore_client().expect("Unable to create eventstore client");
             let mut sub = match create_sub(&client).await {
                 Ok(sub) => sub,
                 Err(_) => return,
@@ -77,18 +81,26 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for ChatServer {
             loop {
                 let e = sub.next().await.unwrap();
                 let event = e.event.as_ref().unwrap();
-
-                if event.event_type == "ChatMessageSentEvent" {
-                    let text: String = event.data.as_ref().iter().map(|it| *it as char).collect();
-                    println!("{text}");
-                    let dto = Event { body: text };
-                    recipient.do_send(dto);
+                if let Ok(event) = event.as_json::<ChatMessageSentEvent>() {
+                    if event.chat_id == chat_id {
+                        let json_string = json!({
+                            "message": event.message,
+                            "sent_by": event.user_id,
+                            "message_id": event.message_id,
+                        })
+                        .to_string();
+                        let dto = Event { body: json_string };
+                        recipient.do_send(dto);
+                    }
                 }
-                // Wrap in a block to make sure the mutex guard is dropped properly.
+
                 sub.ack(e).await.unwrap();
             }
         };
         let fut = actix::fut::wrap_future::<_, Self>(fut);
+        // Since the execution of the future is automatically closed when the
+        // StreamHandler is finished there is no need to manually drop the connection to
+        // Eventstore
         ctx.spawn(fut);
     }
 
@@ -109,14 +121,21 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for ChatServer {
     }
 }
 
+#[derive(Deserialize)]
+struct WsQuery {
+    chat_id: String,
+}
+
 async fn index(
     req: HttpRequest,
     stream: web::Payload,
     client_count: Data<Arc<AtomicUsize>>,
+    query: web::Query<WsQuery>,
 ) -> Result<HttpResponse, Error> {
     ws::start(
         ChatServer {
             client_count: client_count.as_ref().clone(),
+            chat_id: query.chat_id.clone(),
         },
         &req,
         stream,

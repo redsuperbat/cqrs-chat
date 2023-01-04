@@ -10,11 +10,11 @@ export type Data = {
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<Data | undefined>
+  res: NextApiResponse<Data>
 ) {
   const { id } = req.query;
   if (id === "undefined") {
-    return res.status(400).send(undefined);
+    return res.status(400);
   }
 
   const { data } = await axios.get(`${chatProjectionBaseUrl}/chats/${id}`);

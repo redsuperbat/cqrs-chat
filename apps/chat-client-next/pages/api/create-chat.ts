@@ -11,6 +11,10 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<Data>
 ) {
+  if (req.method !== "POST") {
+    return res.status(400);
+  }
+
   const response = await axios.post(
     `${chatAggregateBaseUrl}/create-chat`,
     req.body

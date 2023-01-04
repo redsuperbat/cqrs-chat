@@ -5,8 +5,14 @@ import useWebSocket from "react-use-websocket";
 import useSWR from "swr";
 import { UserStore } from "../../storage/user-store";
 import type { Data } from "../api/chats/[id]";
+import type { GetWebsocketUrlData } from "../api/websocket-url";
 
 const fetcher = (url: string) => axios.get(url).then((res) => res.data);
+
+const createWebsocketUrl = (baseUrl?: string, chat_id?: string | string[]) => {
+  if (!baseUrl || !chat_id) return "ws://localhost:8082/ws/";
+  return `${baseUrl}/ws/?chat_id=${chat_id}`;
+};
 
 export default () => {
   const [message, setMessage] = useState<string>("");
@@ -14,15 +20,24 @@ export default () => {
     { message: string; sent_by: string; message_id: string }[]
   >([]);
   const router = useRouter();
-  const { lastJsonMessage } = useWebSocket(`ws://localhost:8082/ws/`);
 
-  const { data, isLoading, mutate } = useSWR<Data>(
+  const { data: websocketUrl } = useSWR<GetWebsocketUrlData>(
+    "/api/websocket-url",
+    fetcher
+  );
+
+  const { lastJsonMessage } = useWebSocket(
+    createWebsocketUrl(websocketUrl?.url, router.query.id)
+  );
+
+  const { data, isLoading } = useSWR<Data>(
     `/api/chats/${router.query.id}`,
     fetcher
   );
 
   useEffect(() => {
-    setMessages((it) => [...it, lastJsonMessage]);
+    if (!lastJsonMessage) return;
+    setMessages((it) => [lastJsonMessage, ...it]);
   }, [lastJsonMessage]);
 
   useEffect(() => {

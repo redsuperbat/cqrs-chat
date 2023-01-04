@@ -13,7 +13,7 @@ jobs:
           [
             { name: chat-projection, file: projections/chat/Dockerfile },
             { name: chat-aggregate, file: aggregates/chat/Dockerfile },
-            # { name: chat-client, file: apps/chat-client/Dockerfile },
+            { name: chat-client-next, file: apps/chat-client-next/Dockerfile },
           ]
     steps:
       - name: Checkout
