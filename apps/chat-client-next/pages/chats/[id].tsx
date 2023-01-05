@@ -10,7 +10,7 @@ import type { GetWebsocketUrlData } from "../api/websocket-url";
 const fetcher = (url: string) => axios.get(url).then((res) => res.data);
 
 const createWebsocketUrl = (baseUrl?: string, chat_id?: string | string[]) => {
-  if (!baseUrl || !chat_id) return "ws://localhost:8082/ws/";
+  if (!baseUrl || !chat_id) return "ws://0.0.0.0:8082/ws/";
   return `${baseUrl}/ws/?chat_id=${chat_id}`;
 };
 
@@ -77,14 +77,21 @@ export default () => {
             />
           ))}
         </div>
-        <div className="chat-input">
-          <input
-            type="text"
-            value={message}
-            onInput={(e) => setMessage(e.currentTarget.value)}
-            onKeyUp={(e) => e.key === "Enter" && sendChatMessage()}
-          />
-          <button onClick={() => sendChatMessage()}>Send!</button>
+        <div className="chat-lower-bound">
+          <div className="chat-input">
+            <input
+              type="text"
+              value={message}
+              onInput={(e) => setMessage(e.currentTarget.value)}
+              onKeyUp={(e) => e.key === "Enter" && sendChatMessage()}
+            />
+            <button onClick={() => sendChatMessage()}>Send!</button>
+          </div>
+          <small>
+            Remember, chatting is about making contact. If you want to read and
+            not talk checkout my{" "}
+            <a href="https://github.com/redsuperbat">github.</a>
+          </small>
         </div>
       </section>
     </div>
