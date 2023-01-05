@@ -2,7 +2,8 @@ import axios from "axios";
 import { useRouter } from "next/router";
 import { useState } from "react";
 import { Info } from "../../components/info";
-import { Tooltip } from "../../components/tooltip";
+import { SideBar } from "../../components/Sidebar";
+import { Tooltip } from "../../components/Tooltip";
 import { UserStore } from "../../storage/user-store";
 
 export default () => {
@@ -26,6 +27,9 @@ export default () => {
 
   return (
     <div id="main">
+      <SideBar>
+        <h1>Hello world!</h1>
+      </SideBar>
       <div className="card">
         <h3>Chat with me! 🌟</h3>
         <div className="input-container">
