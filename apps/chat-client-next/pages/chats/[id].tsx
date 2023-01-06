@@ -2,12 +2,10 @@ import axios from "axios";
 import { useRouter } from "next/router";
 import { FC, useEffect, useRef, useState } from "react";
 import useWebSocket from "react-use-websocket";
-import useSWR from "swr";
 import { UserStore } from "../../storage/user-store";
+import { useSwr } from "../../swr/use-swr";
 import type { Data } from "../api/chats/[id]";
 import type { GetWebsocketUrlData } from "../api/websocket-url";
-
-const fetcher = (url: string) => axios.get(url).then((res) => res.data);
 
 const createWebsocketUrl = (baseUrl?: string, chat_id?: string | string[]) => {
   if (!baseUrl || !chat_id) return "ws://0.0.0.0:8082/ws/";
@@ -22,19 +20,14 @@ export default () => {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const { data: websocketUrl } = useSWR<GetWebsocketUrlData>(
-    "/api/websocket-url",
-    fetcher
-  );
+  const { data: websocketUrl } =
+    useSwr<GetWebsocketUrlData>("/api/websocket-url");
 
   const { lastJsonMessage } = useWebSocket(
     createWebsocketUrl(websocketUrl?.url, router.query.id)
   );
 
-  const { data, isLoading } = useSWR<Data>(
-    `/api/chats/${router.query.id}`,
-    fetcher
-  );
+  const { data, isLoading } = useSwr<Data>(`/api/chats/${router.query.id}`);
 
   useEffect(() => {
     if (!lastJsonMessage) return;
@@ -98,10 +91,16 @@ export default () => {
             />
             <button onClick={() => sendChatMessage()}>Send!</button>
           </div>
-          <small>
+          <small className="text-center">
             Remember, chatting is about making contact. If you want to read and
-            not talk checkout my{" "}
-            <a href="https://github.com/redsuperbat">github.</a>
+            not talk checkout my
+            <br />
+            <a
+              href="https://github.com/redsuperbat"
+              className="text-blue-500 font-bold underline"
+            >
+              github
+            </a>
           </small>
         </div>
       </section>

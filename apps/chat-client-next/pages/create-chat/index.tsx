@@ -8,12 +8,14 @@ import { UserStore } from "../../storage/user-store";
 export default () => {
   const [username, setUsername] = useState<string>("");
   const [subject, setSubject] = useState<string>("");
+  const [disabled, setDisabled] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     const username = UserStore.get()?.username;
     if (!username) return;
     setUsername(username);
+    setDisabled(true);
   }, []);
 
   const createChat = async () => {
@@ -55,6 +57,7 @@ export default () => {
             placeholder="Barry Plotter"
             value={username}
             onInput={(e) => setUsername(e.currentTarget.value)}
+            disabled={disabled}
           />
           <label
             htmlFor="subject"

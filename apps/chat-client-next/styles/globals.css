@@ -193,10 +193,6 @@ section {
   flex-direction: column;
   border-radius: 4px;
 }
-.chat-lower-bound small {
-  text-align: center;
-  padding: 5px;
-}
 
 .chat-input {
   display: flex;
