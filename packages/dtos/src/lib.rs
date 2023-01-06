@@ -22,10 +22,3 @@ pub struct CreateChatDto {
     pub user_id: String,
     pub chat_id: String,
 }
-
-#[derive(Deserialize, Serialize)]
-pub struct SendChatMessageDto {
-    pub chat_id: String,
-    pub message: String,
-    pub username: String,
-}

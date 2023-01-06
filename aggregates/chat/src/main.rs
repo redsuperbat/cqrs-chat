@@ -2,7 +2,7 @@ use std::env;
 
 use actix_cors::Cors;
 use actix_web::{http, middleware::Logger, post, web, App, HttpResponse, HttpServer, Responder};
-use dtos::{JsonResponse, SendChatMessageDto};
+use dtos::JsonResponse;
 use events::{ChatCreatedEvent, ChatMessageSentEvent};
 use eventstore::{Client, EventData};
 use log::info;
@@ -32,7 +32,7 @@ fn hash_username(username: &str) -> String {
 struct CreateChatDto {
     #[validate(length(min = 1, max = 12))]
     username: String,
-    #[validate(length(min = 1, max = 24))]
+    #[validate(length(min = 1, max = 36))]
     subject: String,
 }
 
@@ -40,7 +40,7 @@ struct CreateChatDto {
 async fn create_chat(client: web::Data<Client>, json: web::Json<CreateChatDto>) -> impl Responder {
     match json.validate() {
         Ok(_) => (),
-        Err(_) => return HttpResponse::BadRequest().finish(),
+        Err(e) => return HttpResponse::BadRequest().body(to_string(&e).unwrap()),
     };
     let id = uuid::Uuid::new_v4().to_string();
     let event_data = ChatCreatedEvent {
@@ -57,22 +57,33 @@ async fn create_chat(client: web::Data<Client>, json: web::Json<CreateChatDto>) 
     http_ok("Chat created successfully", Some(event_data))
 }
 
+#[derive(Deserialize, Serialize, Validate)]
+struct SendChatMessageDto {
+    #[validate(length(min = 36, max = 36))]
+    chat_id: String,
+    #[validate(length(min = 1, max = 255))]
+    message: String,
+    #[validate(length(min = 1, max = 24))]
+    username: String,
+}
+
 #[post("/send-chat-message")]
 async fn send_chat_message(
     client: web::Data<Client>,
-    body: web::Json<SendChatMessageDto>,
+    json: web::Json<SendChatMessageDto>,
 ) -> impl Responder {
-    if body.message.is_empty() {
-        return HttpResponse::BadRequest().finish();
-    }
+    match json.validate() {
+        Ok(()) => (),
+        Err(e) => return HttpResponse::BadRequest().body(to_string(&e).unwrap()),
+    };
 
     let message_id = uuid::Uuid::new_v4().to_string();
 
     let event_data = ChatMessageSentEvent {
         message_id,
-        user_id: hash_username(&body.username),
-        chat_id: body.chat_id.clone(),
-        message: body.message.clone(),
+        user_id: hash_username(&json.username),
+        chat_id: json.chat_id.clone(),
+        message: json.message.clone(),
     };
     let event = EventData::json("ChatMessageSentEvent", &event_data).unwrap();
     client

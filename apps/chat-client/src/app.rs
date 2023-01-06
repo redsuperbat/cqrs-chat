@@ -1,4 +1,4 @@
-use dtos::{ChatMessage, CreateChatDto, GetChatDto, JsonResponse, SendChatMessageDto};
+use dtos::{ChatMessage, CreateChatDto, GetChatDto, JsonResponse};
 use eyre::Result;
 use leptos::{web_sys::KeyboardEvent, *};
 use leptos_meta::*;
