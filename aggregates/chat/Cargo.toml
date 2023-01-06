@@ -16,6 +16,7 @@ dtos = { path = "../../packages/dtos" }
 log = "0.4.17"
 env_logger = "0.10.0"
 actix-cors = "0.6.4"
+validator = { version = "0.15", features = ["derive"] }
 
 [dependencies.uuid]
 version = "1.2.2"

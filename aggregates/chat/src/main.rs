@@ -9,6 +9,7 @@ use log::info;
 use serde::{Deserialize, Serialize};
 use serde_json::to_string;
 use sha2::{Digest, Sha256};
+use validator::Validate;
 
 fn http_ok<T: Serialize>(message: &str, data: Option<T>) -> HttpResponse {
     let body = JsonResponse {
@@ -27,18 +28,27 @@ fn hash_username(username: &str) -> String {
     format!("{hash:x}")
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Validate)]
 struct CreateChatDto {
+    #[validate(length(min = 1, max = 12))]
     username: String,
+    #[validate(length(min = 1, max = 24))]
+    subject: String,
 }
 
 #[post("/create-chat")]
-async fn create_chat(client: web::Data<Client>, body: web::Json<CreateChatDto>) -> impl Responder {
+async fn create_chat(client: web::Data<Client>, json: web::Json<CreateChatDto>) -> impl Responder {
+    match json.validate() {
+        Ok(_) => (),
+        Err(_) => return HttpResponse::BadRequest().finish(),
+    };
     let id = uuid::Uuid::new_v4().to_string();
     let event_data = ChatCreatedEvent {
         chat_id: id,
-        user_id: hash_username(&body.username),
+        user_id: hash_username(&json.username),
+        subject: json.subject.clone(),
     };
+    info!("Producing event {:?}", &event_data);
     let event = EventData::json("ChatCreatedEvent", &event_data).unwrap();
     client
         .append_to_stream("chat-stream", &Default::default(), event)
@@ -60,7 +70,6 @@ async fn send_chat_message(
 
     let event_data = ChatMessageSentEvent {
         message_id,
-        // :x is a hexadecimal format!
         user_id: hash_username(&body.username),
         chat_id: body.chat_id.clone(),
         message: body.message.clone(),

@@ -12,4 +12,5 @@ pub struct ChatMessageSentEvent {
 pub struct ChatCreatedEvent {
     pub chat_id: String,
     pub user_id: String,
+    pub subject: String,
 }

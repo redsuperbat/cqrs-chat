@@ -3,7 +3,7 @@ use actix_web::{
     get, http,
     middleware::Logger,
     rt::spawn,
-    web::{Data, Path},
+    web::{Data, Path, Query},
     App, HttpResponse, HttpServer, Responder,
 };
 
@@ -11,6 +11,7 @@ use dtos::{ChatMessage, GetChatDto};
 use events::{ChatCreatedEvent, ChatMessageSentEvent};
 use eventstore::{Client, PersistentSubscriptionOptions, RecordedEvent, StreamPosition};
 use log::{error, info};
+use serde::{Deserialize, Serialize};
 use serde_json::to_string;
 use std::{
     collections::HashMap,
@@ -19,15 +20,23 @@ use std::{
 };
 use uuid::Uuid;
 
+#[derive(Serialize, Debug, Clone)]
+struct Chat {
+    chat_id: String,
+    subject: String,
+}
+
 #[derive(Debug)]
 struct State {
     chats: HashMap<String, Vec<ChatMessage>>,
+    user_chats: HashMap<String, Vec<Chat>>,
 }
 
 impl State {
     fn new() -> State {
         State {
             chats: HashMap::new(),
+            user_chats: HashMap::new(),
         }
     }
     fn handle(&mut self, event: &RecordedEvent) {
@@ -36,7 +45,15 @@ impl State {
         match event_type {
             "ChatCreatedEvent" => {
                 if let Ok(event) = event.as_json::<ChatCreatedEvent>() {
-                    self.chats.insert(event.chat_id, vec![]);
+                    self.chats.insert(event.chat_id.clone(), vec![]);
+                    let chats = self
+                        .user_chats
+                        .entry(event.user_id)
+                        .or_insert_with(Vec::new);
+                    chats.push(Chat {
+                        chat_id: event.chat_id,
+                        subject: event.subject,
+                    })
                 }
             }
             "ChatMessageSentEvent" => {
@@ -110,6 +127,39 @@ async fn get_chat(chat_id: Path<String>, proj: Data<Arc<Mutex<State>>>) -> impl 
         .body(body)
 }
 
+#[derive(Deserialize)]
+struct UserQuery {
+    user_id: String,
+}
+
+#[derive(Serialize)]
+struct GetChatsDto {
+    chats: Vec<Chat>,
+}
+
+#[get("/chats")]
+async fn get_chats(user: Query<UserQuery>, proj: Data<Arc<Mutex<State>>>) -> impl Responder {
+    let state = match proj.lock() {
+        Ok(it) => it,
+        Err(_) => return HttpResponse::InternalServerError().finish(),
+    };
+
+    let vecs = match state.user_chats.get(&user.user_id) {
+        Some(it) => it,
+        None => return HttpResponse::NotFound().finish(),
+    };
+    let dto = GetChatsDto {
+        chats: (*vecs).clone(),
+    };
+    let body = match to_string(&dto) {
+        Ok(it) => it,
+        Err(_) => return HttpResponse::InternalServerError().finish(),
+    };
+    HttpResponse::Ok()
+        .content_type("application/json")
+        .body(body)
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
@@ -136,6 +186,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(cors)
             .app_data(Data::new(projection.clone()))
             .service(get_chat)
+            .service(get_chats)
     })
     .workers(2)
     .bind(("0.0.0.0", port))?
