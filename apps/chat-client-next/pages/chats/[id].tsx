@@ -1,6 +1,6 @@
 import axios from "axios";
 import { useRouter } from "next/router";
-import { FC, useEffect, useState } from "react";
+import { FC, useEffect, useRef, useState } from "react";
 import useWebSocket from "react-use-websocket";
 import useSWR from "swr";
 import { UserStore } from "../../storage/user-store";
@@ -20,6 +20,7 @@ export default () => {
     { message: string; sent_by: string; message_id: string }[]
   >([]);
   const router = useRouter();
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const { data: websocketUrl } = useSWR<GetWebsocketUrlData>(
     "/api/websocket-url",
@@ -45,14 +46,20 @@ export default () => {
   }, [data]);
 
   const sendChatMessage = async () => {
+    const username = UserStore.get()?.username;
+
     if (!message) {
+      return;
+    }
+
+    if (!username) {
       return;
     }
 
     await axios.post("/api/send-chat-message", {
       message,
       chat_id: router.query.id,
-      username: UserStore.get().username,
+      username,
     });
     setMessage("");
   };
@@ -73,14 +80,18 @@ export default () => {
             <ChatMessage
               key={it.message_id}
               text={it.message}
-              isMine={it.sent_by === UserStore.get().hashedUsername}
+              isMine={it.sent_by === UserStore.get()?.hashedUsername}
             />
           ))}
         </div>
-        <div className="chat-lower-bound">
+        <div
+          className="chat-lower-bound"
+          onClick={() => inputRef.current?.focus()}
+        >
           <div className="chat-input">
             <input
               type="text"
+              ref={inputRef}
               value={message}
               onInput={(e) => setMessage(e.currentTarget.value)}
               onKeyUp={(e) => e.key === "Enter" && sendChatMessage()}

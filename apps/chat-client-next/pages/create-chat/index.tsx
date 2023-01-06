@@ -1,14 +1,20 @@
 import axios from "axios";
 import { useRouter } from "next/router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Info } from "../../components/info";
-import { SideBar } from "../../components/Sidebar";
 import { Tooltip } from "../../components/Tooltip";
 import { UserStore } from "../../storage/user-store";
 
 export default () => {
   const [username, setUsername] = useState<string>("");
+  const [subject, setSubject] = useState<string>("");
   const router = useRouter();
+
+  useEffect(() => {
+    const username = UserStore.get()?.username;
+    if (!username) return;
+    setUsername(username);
+  }, []);
 
   const createChat = async () => {
     if (!username) {
@@ -17,6 +23,7 @@ export default () => {
 
     const { data } = await axios.post("/api/create-chat", {
       username,
+      subject,
     });
     UserStore.set({
       hashedUsername: data.data.user_id,
@@ -27,22 +34,41 @@ export default () => {
 
   return (
     <div id="main">
-      <SideBar>
-        <h1>Hello world!</h1>
-      </SideBar>
       <div className="card">
-        <h3>Chat with me! 🌟</h3>
-        <div className="input-container">
-          <div className="input-container-label-wrapper">
-            <label>Username</label>
+        <h3 className="text-xl font-bold">Chat with me! 🌟</h3>
+        <div className="w-72">
+          <div className="flex justify-between mb-1">
+            <label
+              htmlFor="username"
+              className="mb-2 text-sm font-bold text-gray-700"
+            >
+              Username
+            </label>
             <Tooltip text="Username is only stored client side">
               <Info />
             </Tooltip>
           </div>
           <input
+            id="username"
             type="text"
+            className="w-full px-3 py-2 mb-3 leading-tight text-gray-700 border rounded shadow appearance-none focus:outline-none focus:shadow-outline"
+            placeholder="Barry Plotter"
             value={username}
             onInput={(e) => setUsername(e.currentTarget.value)}
+          />
+          <label
+            htmlFor="subject"
+            className="mb-2 text-sm font-bold text-gray-700"
+          >
+            Subject
+          </label>
+          <input
+            id="subject"
+            type="text"
+            className="w-full px-3 py-2 mb-3 leading-tight text-gray-700 border rounded shadow appearance-none focus:outline-none focus:shadow-outline"
+            placeholder="Latest changes to the rust lang..."
+            value={subject}
+            onInput={(e) => setSubject(e.currentTarget.value)}
           />
         </div>
         <div>

@@ -1,3 +1,7 @@
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
 #main {
   height: 100vh;
   display: grid;
@@ -187,6 +191,7 @@ section {
   border: 1px solid #ccc;
   display: flex;
   flex-direction: column;
+  border-radius: 4px;
 }
 .chat-lower-bound small {
   text-align: center;
