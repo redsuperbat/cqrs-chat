@@ -30,7 +30,7 @@ fn hash_string(string: &str) -> String {
 
 #[derive(Deserialize, Validate)]
 struct CreateChatDto {
-    #[validate(length(min = 1, max = 12))]
+    #[validate(length(min = 1, max = 36))]
     username: String,
     #[validate(length(min = 1, max = 36))]
     subject: String,

@@ -18,6 +18,12 @@ export default () => {
     setDisabled(true);
   }, []);
 
+  const clearUser = () => {
+    UserStore.clear();
+    setUsername("");
+    setDisabled(false);
+  };
+
   const createChat = async () => {
     if (!username) {
       return;
@@ -50,15 +56,36 @@ export default () => {
               <Info />
             </Tooltip>
           </div>
-          <input
-            id="username"
-            type="text"
-            className="w-full px-3 py-2 mb-3 leading-tight text-gray-700 border rounded shadow appearance-none focus:outline-none focus:shadow-outline"
-            placeholder="Barry Plotter"
-            value={username}
-            onInput={(e) => setUsername(e.currentTarget.value)}
-            disabled={disabled}
-          />
+          <div className="relative">
+            <input
+              id="username"
+              type="text"
+              className="w-full px-3 py-2 mb-3 leading-tight text-gray-700 border rounded shadow appearance-none focus:outline-none focus:shadow-outline"
+              placeholder="Barry Plotter"
+              value={username}
+              onInput={(e) => setUsername(e.currentTarget.value)}
+              disabled={disabled}
+            />
+            {disabled ? (
+              <div
+                onClick={() => clearUser()}
+                className="absolute right-1 top-0 h-9 w-9 grid place-items-center text-red-500 hover:bg-gray-400 hover:bg-opacity-25 cursor-pointer rounded-full transition-all"
+              >
+                <svg
+                  style={{
+                    width: "24px",
+                    height: "24px",
+                  }}
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    fill="currentColor"
+                    d="M9,3V4H4V6H5V19A2,2 0 0,0 7,21H17A2,2 0 0,0 19,19V6H20V4H15V3H9M7,6H17V19H7V6M9,8V17H11V8H9M13,8V17H15V8H13Z"
+                  />
+                </svg>
+              </div>
+            ) : null}
+          </div>
           <label
             htmlFor="subject"
             className="mb-2 text-sm font-bold text-gray-700"
