@@ -2,6 +2,7 @@
 
 import axios from "axios";
 import { useRouter } from "next/router";
+import { emojify } from "node-emoji";
 import { FC, useEffect, useRef, useState } from "react";
 import { useWebSocket } from "../../hooks/use-websocket";
 import { UserStore } from "../../storage/user-store";
@@ -30,6 +31,7 @@ export default () => {
 
   const id = useRouter().query.id;
   const inputRef = useRef<HTMLInputElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
   const { data: baseUrl } = useSwr<GetWebsocketUrlData>("/api/websocket-url");
 
   const { data: jsonMsg } = useWebSocket<ChatMessage>(
@@ -41,6 +43,10 @@ export default () => {
   );
 
   useEffect(() => {
+    setMessage(emojify(message));
+  }, [message]);
+
+  useEffect(() => {
     if (!jsonMsg) return;
     setMessages((it) => [jsonMsg, ...it]);
   }, [jsonMsg]);
@@ -49,21 +55,27 @@ export default () => {
     setMessages(allPreviousMessages?.messages ?? []);
   }, [allPreviousMessages]);
 
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({
+      behavior: "smooth",
+    });
+  }, [messages]);
+
   const sendChatMessage = async () => {
-    const username = UserStore.get()?.username;
+    const user_id = UserStore.get()?.user_id;
 
     if (!message) {
       return;
     }
 
-    if (!username) {
+    if (!user_id) {
       return;
     }
 
     await axios.post("/api/send-chat-message", {
       message,
       chat_id: id,
-      username,
+      user_id,
     });
     setMessage("");
   };
@@ -80,11 +92,12 @@ export default () => {
     <div className="chat-page-bg">
       <section className="chat-page">
         <div className="chat-messages">
+          <div ref={bottomRef}></div>
           {messages.map((it) => (
             <ChatMessage
               key={it.message_id}
               text={it.message}
-              isMine={it.sent_by === UserStore.get()?.hashedUsername}
+              isMine={it.sent_by === UserStore.get()?.user_id}
             />
           ))}
         </div>

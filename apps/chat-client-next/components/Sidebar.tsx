@@ -9,7 +9,7 @@ import { useSwr } from "../swr/use-swr";
 export const Sidebar: FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { data } = useSwr<GetChatsData>(
-    `/api/chats?user_id=${UserStore.get()?.hashedUsername}`
+    `/api/chats?user_id=${UserStore.get()?.user_id}`
   );
   const router = useRouter();
 

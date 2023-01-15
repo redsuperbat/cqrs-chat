@@ -28,7 +28,7 @@ export default () => {
       subject,
     });
     UserStore.set({
-      hashedUsername: data.data.user_id,
+      user_id: data.data.user_id,
       username,
     });
     await router.push(`/chats/${data.data.chat_id}`);

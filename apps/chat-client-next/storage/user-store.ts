@@ -1,6 +1,6 @@
 export type UserStoreState = {
   username: string;
-  hashedUsername: string;
+  user_id: string;
 };
 
 const key = "user-store";
