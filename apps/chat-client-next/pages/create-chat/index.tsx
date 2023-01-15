@@ -30,21 +30,22 @@ export default () => {
       return;
     }
     try {
+      const user_id = UserStore.get()?.user_id;
       const { data } = await axios.post("/api/create-chat", {
         username,
         subject,
+        user_id,
       });
-      console.log("setting user store", data);
       UserStore.set({
-        user_id: data.data.user_id,
+        user_id: data.user_id,
         username,
       });
-      console.log("Pushing router", data);
-      await router.push(`/chats/${data.data.chat_id}`);
-      console.log("Pushed router");
+      await router.push(`/chats/${data.chat_id}`);
     } catch (e) {
       if (isAxiosError(e)) {
         toast(e.response?.data.message);
+      } else {
+        console.error(e);
       }
     }
   };

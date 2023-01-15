@@ -1,4 +1,4 @@
-use std::env;
+use std::{env, fmt::Display};
 
 use actix_cors::Cors;
 use actix_web::{
@@ -65,19 +65,20 @@ impl ValidationErrorResponseExt for ValidationErrors {
     }
 }
 
-fn hash_string(string: &str) -> String {
+fn hash_string(string: impl Display) -> String {
     let mut sha256 = Sha256::new();
-    sha256.update(string);
+    sha256.update(string.to_string());
     let hash = sha256.finalize();
     format!("{hash:x}")
 }
 
-#[derive(Deserialize, Validate)]
+#[derive(Deserialize, Validate, Debug)]
 struct CreateChatDto {
     #[validate(length(min = 1, max = 36))]
     username: String,
     #[validate(length(min = 1, max = 36))]
     subject: String,
+    user_id: Option<String>,
 }
 
 #[post("/create-chat")]
@@ -87,10 +88,13 @@ async fn create_chat(client: web::Data<Client>, json: web::Json<CreateChatDto>) 
         Err(e) => return e.to_response(),
     };
     let id = uuid::Uuid::new_v4().to_string();
-    let user_id = uuid::Uuid::new_v4().to_string() + &json.username;
+    let user_id = json.user_id.clone().unwrap_or(hash_string(
+        uuid::Uuid::new_v4().to_string() + &json.username,
+    ));
+    info!("{:?}", json);
     let event_data = ChatCreatedEvent {
         chat_id: id,
-        user_id: hash_string(&user_id),
+        user_id,
         subject: json.subject.clone(),
     };
     info!("Producing event {:?}", &event_data);

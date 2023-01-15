@@ -4,7 +4,7 @@ use actix_web::{
     middleware::Logger,
     rt::spawn,
     web::{Data, Path, Query},
-    App, HttpResponse, HttpServer, Responder,
+    App, HttpResponse, HttpResponseBuilder, HttpServer, Responder,
 };
 
 use dtos::{ChatMessage, GetChatDto};
@@ -13,13 +13,61 @@ use eventstore::{Client, PersistentSubscriptionOptions, RecordedEvent, StreamPos
 use eyre::{Error, Result};
 use log::{error, info};
 use serde::{Deserialize, Serialize};
-use serde_json::to_string;
+use serde_json::{json, to_string};
 use std::{
     collections::HashMap,
     env,
+    fmt::Display,
     sync::{Arc, Mutex},
 };
 use uuid::Uuid;
+
+trait ContentTypeJsonExt {
+    fn content_type_json(&mut self) -> &mut Self;
+}
+
+impl ContentTypeJsonExt for HttpResponseBuilder {
+    fn content_type_json(&mut self) -> &mut Self {
+        self.content_type("application/json")
+    }
+}
+
+trait NotFoundExt {
+    fn to_not_found_res(self) -> HttpResponse;
+}
+
+impl<Data: Display> NotFoundExt for Data {
+    fn to_not_found_res(self) -> HttpResponse {
+        let json = json!({
+            "message": self.to_string()
+        })
+        .to_string();
+        HttpResponse::NotFound().content_type_json().body(json)
+    }
+}
+
+trait OkExt {
+    fn to_ok_res(&self) -> HttpResponse;
+}
+
+impl<Body: Serialize> OkExt for Body {
+    fn to_ok_res(&self) -> HttpResponse {
+        let json = match to_string(&self) {
+            Ok(it) => it,
+            Err(_) => {
+                return HttpResponse::InternalServerError()
+                    .content_type_json()
+                    .body(
+                        json!({
+                            "message":"Internal server error"
+                        })
+                        .to_string(),
+                    )
+            }
+        };
+        HttpResponse::Ok().content_type_json().body(json)
+    }
+}
 
 #[derive(Serialize, Debug, Clone)]
 struct Chat {
@@ -115,18 +163,12 @@ async fn get_chat(chat_id: Path<String>, proj: Data<Arc<Mutex<State>>>) -> impl 
     let state = proj.lock().expect("Unable to unlock state mutex");
     let chat = match state.chats.get(chat_id.as_str()) {
         Some(it) => it,
-        None => return HttpResponse::NotFound().finish(),
+        None => return format!("Chat with id {} not found", chat_id).to_not_found_res(),
     };
     let dto = GetChatDto {
         messages: chat.to_vec(),
     };
-    let body = match to_string(&dto) {
-        Ok(it) => it,
-        Err(_) => return HttpResponse::InternalServerError().finish(),
-    };
-    HttpResponse::Ok()
-        .content_type("application/json")
-        .body(body)
+    dto.to_ok_res()
 }
 
 #[derive(Deserialize)]
@@ -148,18 +190,12 @@ async fn get_chats(user: Query<UserQuery>, proj: Data<Arc<Mutex<State>>>) -> imp
 
     let vecs = match state.user_chats.get(&user.user_id) {
         Some(it) => it,
-        None => return HttpResponse::NotFound().finish(),
+        None => return "Could not find any chats for the user".to_not_found_res(),
     };
     let dto = GetChatsDto {
         chats: (*vecs).clone(),
     };
-    let body = match to_string(&dto) {
-        Ok(it) => it,
-        Err(_) => return HttpResponse::InternalServerError().finish(),
-    };
-    HttpResponse::Ok()
-        .content_type("application/json")
-        .body(body)
+    dto.to_ok_res()
 }
 
 #[actix_web::main]
