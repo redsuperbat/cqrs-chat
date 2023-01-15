@@ -1,7 +1,9 @@
 use serde::{Deserialize, Serialize};
 
+pub struct Undefined(());
+
 #[derive(Serialize, Deserialize, Clone)]
-pub struct JsonResponse<T> {
+pub struct JsonResponse<T: Serialize> {
     pub data: T,
     pub message: String,
 }

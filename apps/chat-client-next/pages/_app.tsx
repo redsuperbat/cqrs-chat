@@ -1,5 +1,7 @@
 import { Inter } from "@next/font/google";
 import type { AppProps } from "next/app";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import { Sidebar } from "../components/Sidebar";
 import "../styles/globals.css";
 
@@ -28,6 +30,7 @@ export default function App({ Component, pageProps }: AppProps) {
         </svg>
       </a>
       <Component {...pageProps} />
+      <ToastContainer />
     </main>
   );
 }

@@ -1,5 +1,4 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
-import axios from "axios";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { chatProjectionBaseUrl } from "../url";
 
@@ -11,14 +10,14 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<GetChatsData>
 ) {
-  if (req.method !== "GET") {
-    return res.status(400);
-  }
-
-  const { data } = await axios
-    .get(`${chatProjectionBaseUrl}/chats?user_id=${req.query.user_id}`)
-    .catch((e) => {
-      throw e.message;
-    });
-  res.status(200).json(data);
+  const response = await fetch(
+    `${chatProjectionBaseUrl}/chats?user_id=${req.query.user_id}`,
+    {
+      method: req.method,
+      headers: {
+        "Content-Type": "application/json",
+      },
+    }
+  );
+  return res.status(response.status).json(await response.json());
 }

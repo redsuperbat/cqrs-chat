@@ -1,24 +1,68 @@
 use std::env;
 
 use actix_cors::Cors;
-use actix_web::{http, middleware::Logger, post, web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{
+    http, middleware::Logger, post, web, App, HttpResponse, HttpResponseBuilder, HttpServer,
+    Responder,
+};
 use dtos::JsonResponse;
 use events::{ChatCreatedEvent, ChatMessageSentEvent};
 use eventstore::{Client, EventData};
 use log::info;
 use serde::{Deserialize, Serialize};
-use serde_json::to_string;
+use serde_json::{json, to_string};
 use sha2::{Digest, Sha256};
-use validator::Validate;
+use validator::{Validate, ValidationErrors};
 
-fn http_ok<T: Serialize>(message: &str, data: Option<T>) -> HttpResponse {
-    let body = JsonResponse {
-        message: message.to_string(),
-        data,
-    };
-    HttpResponse::Ok()
-        .content_type("application/json")
-        .body(to_string(&body).unwrap())
+trait ContentTypeJsonExt {
+    fn content_type_json(&mut self) -> &mut Self;
+}
+
+impl ContentTypeJsonExt for HttpResponseBuilder {
+    fn content_type_json(&mut self) -> &mut Self {
+        self.content_type("application/json")
+    }
+}
+
+trait JsonRespExt {
+    fn to_json_response(&self, message: &str) -> HttpResponse;
+}
+
+impl<DataStruct: Serialize> JsonRespExt for DataStruct {
+    fn to_json_response(&self, message: &str) -> HttpResponse {
+        JsonResponse {
+            data: self.clone(),
+            message: message.to_string(),
+        };
+        let json_string = match to_string(&self) {
+            Ok(it) => it,
+            Err(_) => return HttpResponse::InternalServerError().finish(),
+        };
+
+        HttpResponse::Ok().content_type_json().body(json_string)
+    }
+}
+
+trait ValidationErrorResponseExt {
+    fn to_response(&self) -> HttpResponse;
+}
+
+impl ValidationErrorResponseExt for ValidationErrors {
+    fn to_response(&self) -> HttpResponse {
+        let msg = self
+            .field_errors()
+            .into_iter()
+            .map(|(str, _)| format!("Field {} is invalid", str))
+            .collect::<Vec<_>>()
+            .join(" and ");
+
+        let json = json!({
+            "message": msg,
+            "code": 400
+        })
+        .to_string();
+        HttpResponse::BadRequest().content_type_json().body(json)
+    }
 }
 
 fn hash_string(string: &str) -> String {
@@ -40,7 +84,7 @@ struct CreateChatDto {
 async fn create_chat(client: web::Data<Client>, json: web::Json<CreateChatDto>) -> impl Responder {
     match json.validate() {
         Ok(_) => (),
-        Err(e) => return HttpResponse::BadRequest().body(to_string(&e).unwrap()),
+        Err(e) => return e.to_response(),
     };
     let id = uuid::Uuid::new_v4().to_string();
     let user_id = uuid::Uuid::new_v4().to_string() + &json.username;
@@ -55,7 +99,7 @@ async fn create_chat(client: web::Data<Client>, json: web::Json<CreateChatDto>) 
         .append_to_stream("chat-stream", &Default::default(), event)
         .await
         .unwrap();
-    http_ok("Chat created successfully", Some(event_data))
+    event_data.to_json_response("Chat created successfully")
 }
 
 #[derive(Deserialize, Serialize, Validate)]
@@ -75,7 +119,7 @@ async fn send_chat_message(
 ) -> impl Responder {
     match json.validate() {
         Ok(()) => (),
-        Err(e) => return HttpResponse::BadRequest().body(to_string(&e).unwrap()),
+        Err(e) => return e.to_response(),
     };
 
     let message_id = uuid::Uuid::new_v4().to_string();
@@ -91,7 +135,7 @@ async fn send_chat_message(
         .append_to_stream("chat-stream", &Default::default(), event)
         .await
         .unwrap();
-    http_ok("Message sent successfully", Some(event_data))
+    event_data.to_json_response("Message sent successfully!")
 }
 
 #[actix_web::main]

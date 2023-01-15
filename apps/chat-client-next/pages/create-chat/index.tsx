@@ -1,6 +1,7 @@
-import axios from "axios";
+import axios, { isAxiosError } from "axios";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
+import { toast } from "react-toastify";
 import { Info } from "../../components/info";
 import { Tooltip } from "../../components/Tooltip";
 import { UserStore } from "../../storage/user-store";
@@ -28,16 +29,24 @@ export default () => {
     if (!username) {
       return;
     }
-
-    const { data } = await axios.post("/api/create-chat", {
-      username,
-      subject,
-    });
-    UserStore.set({
-      user_id: data.data.user_id,
-      username,
-    });
-    await router.push(`/chats/${data.data.chat_id}`);
+    try {
+      const { data } = await axios.post("/api/create-chat", {
+        username,
+        subject,
+      });
+      console.log("setting user store", data);
+      UserStore.set({
+        user_id: data.data.user_id,
+        username,
+      });
+      console.log("Pushing router", data);
+      await router.push(`/chats/${data.data.chat_id}`);
+      console.log("Pushed router");
+    } catch (e) {
+      if (isAxiosError(e)) {
+        toast(e.response?.data.message);
+      }
+    }
   };
 
   return (
