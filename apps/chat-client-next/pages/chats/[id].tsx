@@ -4,6 +4,7 @@ import axios from "axios";
 import { useRouter } from "next/router";
 import { emojify } from "node-emoji";
 import { FC, useEffect, useRef, useState } from "react";
+import { EmojiSuggester } from "../../components/EmojiSuggester";
 import { useWebSocket } from "../../hooks/use-websocket";
 import { UserStore } from "../../storage/user-store";
 import { useSwr } from "../../swr/use-swr";
@@ -80,6 +81,17 @@ export default () => {
     setMessage("");
   };
 
+  useEffect(() => {
+    const sendMessageIfEnterKey = (e: KeyboardEvent) => {
+      if (e.key === "Enter") {
+        sendChatMessage();
+      }
+    };
+
+    window.addEventListener("keydown", sendMessageIfEnterKey);
+    return () => window.removeEventListener("keydown", sendMessageIfEnterKey);
+  }, [message]);
+
   if (isLoading || !allPreviousMessages) {
     return (
       <div className="center-children">
@@ -105,13 +117,18 @@ export default () => {
           className="chat-lower-bound"
           onClick={() => inputRef.current?.focus()}
         >
+          <EmojiSuggester
+            value={message}
+            onSelect={(it) =>
+              setMessage((msg) => msg.replace(it.replaceWith, it.emoji))
+            }
+          />
           <div className="chat-input">
             <input
               type="text"
               ref={inputRef}
               value={message}
               onInput={(e) => setMessage(e.currentTarget.value)}
-              onKeyUp={(e) => e.key === "Enter" && sendChatMessage()}
             />
             <button onClick={() => sendChatMessage()}>Send!</button>
           </div>
