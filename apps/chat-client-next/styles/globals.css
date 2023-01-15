@@ -1,6 +1,6 @@
-@import 'tailwindcss/base';
-@import 'tailwindcss/components';
-@import 'tailwindcss/utilities';
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
 
 #main {
   height: 100vh;
@@ -130,17 +130,18 @@ h3 {
   font-size: 1em;
   line-height: 1.5;
   margin-bottom: 2px;
+  max-width: 75%;
 }
 
 .chat-message.mine {
   margin-left: auto;
-  background: #ebf8ff;
+  background: #79ff68;
   color: #222;
 }
 
 .chat-message.theirs {
   margin-right: auto;
-  background: #fdfdfd;
+  background: #6eccff;
   color: #222;
 }
 
@@ -187,7 +188,7 @@ section {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.chat-lower-bound{
+.chat-lower-bound {
   border: 1px solid #ccc;
   display: flex;
   flex-direction: column;
@@ -228,6 +229,12 @@ section {
   display: flex;
   flex-direction: column-reverse;
   overflow-y: scroll;
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+/* Hide scrollbar for Chrome, Safari and Opera */
+.chat-messages::-webkit-scrollbar {
+  display: none;
 }
 
 .center-children {
@@ -294,5 +301,3 @@ section {
     transform: rotate(360deg);
   }
 }
-
-

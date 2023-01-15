@@ -10,6 +10,7 @@ use actix_web::{
 use dtos::{ChatMessage, GetChatDto};
 use events::{ChatCreatedEvent, ChatMessageSentEvent};
 use eventstore::{Client, PersistentSubscriptionOptions, RecordedEvent, StreamPosition};
+use eyre::{Error, Result};
 use log::{error, info};
 use serde::{Deserialize, Serialize};
 use serde_json::to_string;
@@ -76,11 +77,11 @@ impl State {
     }
 }
 
-async fn setup_proj_eventstore(proj: Arc<Mutex<State>>) {
+async fn setup_proj_eventstore(proj: Arc<Mutex<State>>) -> Result<()> {
     info!("Bootstrapping eventstore");
-    let uri = env::var("EVENTSTORE_URI").unwrap();
-    let settings = uri.parse().unwrap();
-    let client = Client::new(settings).unwrap();
+    let uri = env::var("EVENTSTORE_URI")?;
+    let settings = uri.parse()?;
+    let client = Client::new(settings)?;
 
     let consumer_grp = Uuid::new_v4().to_string();
 
@@ -88,29 +89,30 @@ async fn setup_proj_eventstore(proj: Arc<Mutex<State>>) {
     let options = PersistentSubscriptionOptions::default().start_from(StreamPosition::Start);
     client
         .create_persistent_subscription("chat-stream", &consumer_grp, &options)
-        .await
-        .unwrap();
+        .await?;
 
     info!("Subscribing to persistent subscription");
     let mut sub = client
         .subscribe_to_persistent_subscription("chat-stream", &consumer_grp, &Default::default())
-        .await
-        .unwrap();
+        .await?;
     loop {
-        let e = sub.next().await.unwrap();
-        let event = e.event.as_ref().unwrap();
+        let event = sub
+            .next()
+            .await
+            .map(|it| it.event)?
+            .ok_or(Error::msg("Unable to fetch event"))?;
         // Wrap in a block to make sure the mutex guard is dropped properly.
         {
             let mut guard = proj.lock().unwrap();
-            guard.handle(event);
+            guard.handle(&event);
         }
-        sub.ack(e).await.unwrap();
+        sub.ack_ids(vec![event.id]).await?;
     }
 }
 
 #[get("/chats/{chat_id}")]
 async fn get_chat(chat_id: Path<String>, proj: Data<Arc<Mutex<State>>>) -> impl Responder {
-    let state = proj.lock().unwrap();
+    let state = proj.lock().expect("Unable to unlock state mutex");
     let chat = match state.chats.get(chat_id.as_str()) {
         Some(it) => it,
         None => return HttpResponse::NotFound().finish(),

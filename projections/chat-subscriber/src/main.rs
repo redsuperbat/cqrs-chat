@@ -105,8 +105,9 @@ struct WsQuery {
 async fn index(
     req: HttpRequest,
     stream: Payload,
-    client_count: Data<Arc<AtomicUsize>>,
     query: Query<WsQuery>,
+    // Data
+    client_count: Data<Arc<AtomicUsize>>,
     tx: Data<Sender<ChatMessageSentEvent>>,
 ) -> Result<HttpResponse, ActixError> {
     ws::start(
@@ -164,7 +165,8 @@ async fn bootstrap_es(tx: Sender<ChatMessageSentEvent>) -> Result<()> {
 
 fn create_cors() -> Cors {
     Cors::default()
-        .allow_any_origin()
+        .allowed_origin("http://localhost:3000")
+        .allowed_origin("https://chat.netterberg.me")
         .allowed_methods(vec!["GET"])
         .allowed_headers(vec![
             http::header::AUTHORIZATION,

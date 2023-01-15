@@ -4,19 +4,12 @@ export type UserStoreState = {
 };
 
 const key = "user-store";
-const defaultUser = {
-  username: "Default user",
-  hashedUsername:
-    "942b74ac58192ee4c82f03e67064c52bf6baa0dc88663e5f801d3d16daf70ff1",
-};
 
 export const UserStore = {
   get() {
     if (typeof window === "undefined") return;
     const json = localStorage.getItem(key);
-    if (!json) {
-      return defaultUser;
-    }
+    if (!json) return;
     return JSON.parse(json) as UserStoreState;
   },
   set(state: UserStoreState) {

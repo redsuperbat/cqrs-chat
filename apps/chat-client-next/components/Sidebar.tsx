@@ -1,4 +1,4 @@
-"use-client";
+"use client";
 
 import { useRouter } from "next/router";
 import { FC, useState } from "react";
@@ -45,7 +45,7 @@ export const Sidebar: FC = () => {
     };
     return (
       <button
-        className="border-2 border-white rounded-md w-full p-1 mb-2"
+        className="border-2 border-white rounded-md w-full p-1 mb-2 hover:bg-slate-400 hover:bg-opacity-30 transition-all"
         onClick={onClick}
       >
         <div className="border border-white rounded p-2 ">
