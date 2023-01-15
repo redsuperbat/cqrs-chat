@@ -21,9 +21,9 @@ fn http_ok<T: Serialize>(message: &str, data: Option<T>) -> HttpResponse {
         .body(to_string(&body).unwrap())
 }
 
-fn hash_username(username: &str) -> String {
+fn hash_string(string: &str) -> String {
     let mut sha256 = Sha256::new();
-    sha256.update(username);
+    sha256.update(string);
     let hash = sha256.finalize();
     format!("{hash:x}")
 }
@@ -43,9 +43,10 @@ async fn create_chat(client: web::Data<Client>, json: web::Json<CreateChatDto>) 
         Err(e) => return HttpResponse::BadRequest().body(to_string(&e).unwrap()),
     };
     let id = uuid::Uuid::new_v4().to_string();
+    let user_id = uuid::Uuid::new_v4().to_string() + &json.username;
     let event_data = ChatCreatedEvent {
         chat_id: id,
-        user_id: hash_username(&json.username),
+        user_id: hash_string(&user_id),
         subject: json.subject.clone(),
     };
     info!("Producing event {:?}", &event_data);
@@ -61,10 +62,10 @@ async fn create_chat(client: web::Data<Client>, json: web::Json<CreateChatDto>) 
 struct SendChatMessageDto {
     #[validate(length(min = 36, max = 36))]
     chat_id: String,
+    #[validate(length(min = 1, max = 120))]
+    user_id: String,
     #[validate(length(min = 1, max = 255))]
     message: String,
-    #[validate(length(min = 1, max = 24))]
-    username: String,
 }
 
 #[post("/send-chat-message")]
@@ -81,7 +82,7 @@ async fn send_chat_message(
 
     let event_data = ChatMessageSentEvent {
         message_id,
-        user_id: hash_username(&json.username),
+        user_id: json.user_id.clone(),
         chat_id: json.chat_id.clone(),
         message: json.message.clone(),
     };
