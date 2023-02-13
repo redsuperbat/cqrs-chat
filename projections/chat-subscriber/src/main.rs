@@ -148,19 +148,14 @@ async fn bootstrap_es(tx: Sender<ChatMessageSentEvent>) -> Result<()> {
         .subscribe_to_persistent_subscription("chat-stream", grp_id, &Default::default())
         .await?;
 
-    loop {
-        let event = sub
-            .next()
-            .await
-            .map(|it| it.event)?
-            .ok_or(Error::msg("Unable to get next event"))?;
-
+    while let Ok(event) = sub.next().await {
+        let event = event.event.ok_or(Error::msg("No recorded event"))?;
         if let Ok(event) = event.as_json::<ChatMessageSentEvent>() {
             tx.send(event)?;
         }
-
         sub.ack_ids(vec![event.id]).await?;
     }
+    Ok(())
 }
 
 fn create_cors() -> Cors {
