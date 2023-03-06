@@ -1,5 +1,5 @@
 use std::{
-    env,
+    env, process,
     sync::{
         atomic::{AtomicUsize, Ordering},
         Arc,
@@ -158,6 +158,14 @@ async fn bootstrap_es(tx: Sender<ChatMessageSentEvent>) -> Result<()> {
     Ok(())
 }
 
+async fn run_es(tx: Sender<ChatMessageSentEvent>) {
+    let res = bootstrap_es(tx).await;
+    if let Err(err) = res {
+        error!("{}", err);
+        process::exit(1);
+    }
+}
+
 fn create_cors() -> Cors {
     Cors::default()
         .allowed_origin("http://localhost:3000")
@@ -177,7 +185,7 @@ async fn main() -> std::io::Result<()> {
     let client_count = Arc::new(AtomicUsize::new(0));
     let port = 8082;
     let (tx, _) = tokio::sync::broadcast::channel::<ChatMessageSentEvent>(100);
-    spawn(bootstrap_es(tx.clone()));
+    spawn(run_es(tx.clone()));
     info!("Started server at http://localhost:{}", port);
     HttpServer::new(move || {
         let cors = create_cors();
