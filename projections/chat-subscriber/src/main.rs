@@ -6,11 +6,10 @@ use std::{
     },
 };
 
-use actix::{spawn, Actor, AsyncContext, Handler, Message, StreamHandler};
+use actix::{spawn, Actor, ActorContext, AsyncContext, Handler, Message, StreamHandler};
 use actix_cors::Cors;
 use actix_web::{
     http,
-    middleware::Logger,
     web::{get, Data, Payload, Query},
     App, Error as ActixError, HttpRequest, HttpResponse, HttpServer,
 };
@@ -30,12 +29,13 @@ struct ChatServer {
 }
 
 impl Actor for ChatServer {
-    type Context = ws::WebsocketContext<Self>;
+    type Context = ws::WebsocketContext<ChatServer>;
 }
 
 #[derive(Message)]
 #[rtype(result = "()")]
 struct Event(String);
+
 impl Handler<Event> for ChatServer {
     type Result = ();
 
@@ -81,18 +81,25 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for ChatServer {
         ctx.spawn(fut);
     }
 
-    fn finished(&mut self, _: &mut Self::Context) {
+    fn finished(&mut self, ctx: &mut Self::Context) {
         self.client_count.fetch_sub(1, Ordering::SeqCst);
         info!(
             "Client disconnected. #clients {}",
             self.client_count.load(Ordering::SeqCst)
         );
+        ctx.stop();
     }
 
     fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, ctx: &mut Self::Context) {
-        if let Ok(ws::Message::Ping(msg)) = msg {
-            info!("Ping {:?}", msg);
-            ctx.pong(&msg)
+        if let Ok(ws::Message::Close(reason)) = msg {
+            if let Some(res) = reason {
+                info!(
+                    "Code {:?}, reason {}",
+                    res.code,
+                    res.description.unwrap_or_default()
+                );
+            }
+            self.finished(ctx);
         }
     }
 }
@@ -190,7 +197,6 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         let cors = create_cors();
         App::new()
-            .wrap(Logger::default())
             .wrap(cors)
             .app_data(Data::new(client_count.clone()))
             .app_data(Data::new(tx.clone()))

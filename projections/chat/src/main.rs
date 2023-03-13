@@ -9,7 +9,7 @@ use actix_web::{
 
 use dtos::{ChatMessage, GetChatDto};
 use events::{ChatCreatedEvent, ChatMessageSentEvent};
-use eventstore::{Client, PersistentSubscriptionOptions, RecordedEvent, StreamPosition};
+use eventstore::{Client, RecordedEvent, StreamPosition, SubscribeToStreamOptions};
 use eyre::{Error, Result};
 use log::{error, info};
 use serde::{Deserialize, Serialize};
@@ -20,7 +20,6 @@ use std::{
     fmt::Display,
     sync::{Arc, Mutex},
 };
-use uuid::Uuid;
 
 trait ContentTypeJsonExt {
     fn content_type_json(&mut self) -> &mut Self;
@@ -125,24 +124,22 @@ impl State {
     }
 }
 
-async fn setup_proj_eventstore(proj: Arc<Mutex<State>>) -> Result<()> {
-    info!("Bootstrapping eventstore");
+fn create_es_client() -> Result<Client> {
     let uri = env::var("EVENTSTORE_URI")?;
     let settings = uri.parse()?;
     let client = Client::new(settings)?;
+    Ok(client)
+}
 
-    let consumer_grp = Uuid::new_v4().to_string();
+async fn bootstrap_es(proj: Arc<Mutex<State>>) -> Result<()> {
+    info!("Bootstrapping eventstore");
+    let stream = "chat-stream";
+    let client = create_es_client()?;
 
-    info!("Creating persistent subscription");
-    let options = PersistentSubscriptionOptions::default().start_from(StreamPosition::Start);
-    client
-        .create_persistent_subscription("chat-stream", &consumer_grp, &options)
-        .await?;
-
-    info!("Subscribing to persistent subscription");
-    let mut sub = client
-        .subscribe_to_persistent_subscription("chat-stream", &consumer_grp, &Default::default())
-        .await?;
+    info!("Subscribing to subscription");
+    let options = SubscribeToStreamOptions::default().start_from(StreamPosition::Start);
+    let mut sub = client.subscribe_to_stream(stream, &options).await;
+    info!("Subscribed to {}", stream);
     loop {
         let event = sub
             .next()
@@ -154,7 +151,14 @@ async fn setup_proj_eventstore(proj: Arc<Mutex<State>>) -> Result<()> {
             let mut guard = proj.lock().unwrap();
             guard.handle(&event);
         }
-        sub.ack_ids(vec![event.id]).await?;
+    }
+}
+
+async fn run_es(proj: Arc<Mutex<State>>) {
+    let res = bootstrap_es(proj).await;
+    if let Err(err) = res {
+        error!("{}", err);
+        std::process::exit(1);
     }
 }
 
@@ -204,7 +208,7 @@ async fn main() -> std::io::Result<()> {
     // Need to use an Arc with mutex here because the state will be mutated at the same time it might be accessed.
     let projection = Arc::new(Mutex::new(State::new()));
 
-    spawn(setup_proj_eventstore(projection.clone()));
+    spawn(run_es(projection.clone()));
 
     let port = 8080;
     info!("Started server on http://localhost:{}", port);

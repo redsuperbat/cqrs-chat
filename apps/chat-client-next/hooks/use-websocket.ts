@@ -12,7 +12,10 @@ export const useWebSocket = <T = unknown>(url?: string) => {
   const [connectionState, setConnectionState] = useState<ConnectionState>();
 
   const startWebsocket = () => {
-    if (!url) return;
+    if (!url) {
+      return () => {};
+    }
+
     // Create WebSocket connection.
     const socket = new WebSocket(url);
 
@@ -23,24 +26,30 @@ export const useWebSocket = <T = unknown>(url?: string) => {
         // Do nothing
       }
     };
+
     socket.onclose = () => {
       setConnectionState(ConnectionState.CLOSED);
-      setTimeout(() => startWebsocket(), 1000);
     };
+
     socket.onerror = () => {
       setConnectionState(ConnectionState.ERROR);
+      setTimeout(() => startWebsocket(), 1000);
+      socket.close();
     };
+
     socket.onopen = () => {
       setConnectionState(ConnectionState.OPEN);
     };
 
     return () => {
-      socket.close();
+      console.log("Closing connection...");
+      socket.close(1000, "Closed connection");
     };
   };
 
   useEffect(() => {
-    return startWebsocket();
+    const cleanup = startWebsocket();
+    return () => cleanup();
   }, [url]);
 
   return { data, connectionState };
