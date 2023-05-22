@@ -4,5 +4,4 @@ members = [
   "aggregates/*",
   "projections/*",
   "packages/*",
-  "apps/chat-client"
 ]
